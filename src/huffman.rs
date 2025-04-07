@@ -35,6 +35,8 @@ impl PartialEq<Self> for Node {
     }
 }
 
+impl Eq for Node { }
+
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         other.probability.partial_cmp(&self.probability)
@@ -46,8 +48,6 @@ impl Ord for Node {
         self.partial_cmp(other).unwrap()
     }
 }
-
-impl Eq for Node { }
 
 // Returns the root
 fn build_tree(sources: &[Source]) -> Node {
@@ -87,5 +87,5 @@ fn encode(sources: &[Source]) -> Vec<u8> {
 }
 
 fn decode() {
-    
+
 }
