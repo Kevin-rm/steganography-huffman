@@ -9,8 +9,8 @@ pub struct Source {
 }
 
 impl Source {
-    pub fn new(symbol: String, probability: f64) -> Self {
-        Source { symbol, probability }
+    pub fn new(symbol: &str, probability: f64) -> Self {
+        Source { symbol: symbol.to_string(), probability }
     }
 
     pub fn symbol(&self) -> &str {
@@ -29,6 +29,11 @@ pub struct Tree {
     leaf_count: usize,
     codes: HashMap<String, Code>
 }
+
+const TEE:      &str = "├── ";
+const ELBOW:    &str = "└── ";
+const VERTICAL: &str = "│";
+const SPACE:    &str = " ";
 
 impl Tree {
     pub fn root(&self) -> &Node {
@@ -98,6 +103,47 @@ impl Tree {
 
         codes
     }
+
+    pub fn render(&self) -> String {
+        fn render(node: &Node, prefix: &str, is_left: bool, result: &mut String) {
+            result.push_str(&format!("{}{}", prefix, if is_left { TEE } else { ELBOW }));
+            
+            if node.is_leaf() {
+                result.push_str(&format!("\"{}\" (p={})\n",
+                    node.symbol().unwrap(), node.probability()
+                ));
+                return;
+            }
+            result.push_str(&format!("Noeud (p={})\n",
+                node.probability()
+            ));
+            
+            let new_prefix = format!("{}{}   ", prefix, if is_left { VERTICAL } else { SPACE });
+            if let Some(left) = &node.left() {
+                render(left, &new_prefix, true, result);
+            }
+            
+            if let Some(right) = &node.right() {
+                render(right, &new_prefix, false, result);
+            }
+        }
+        
+        let mut result = String::from(&format!("Arbre d'Huffman (Nombre de feuilles: {})\n", self.leaf_count));
+        render(&self.root, "", false, &mut result);
+
+        result.push_str("\nTable de codage:\n");
+        let mut codes: Vec<(&String, &Code)> = self.codes.iter().collect();
+        codes.sort_by(|a, b| a.0.cmp(b.0));
+        
+        for (symbol, (code, bits)) in codes {
+            let code_bits = format!("{:b}", code);
+            result.push_str(&format!("\"{}\" => {}{} ({} bits)\n",
+                symbol, "0".repeat(bits.saturating_sub(code_bits.len())), code_bits, bits
+            ));
+        }
+        
+        result
+    }
 }
 
 #[derive(Debug)]
@@ -141,10 +187,10 @@ impl Node {
 
 impl PartialEq<Self> for Node {
     fn eq(&self, other: &Self) -> bool {
-        self.symbol == other.symbol
-            && self.probability == other.probability
-            && self.left  == other.left
-            && self.right == other.right
+        self.symbol == other.symbol               &&
+            self.probability == other.probability &&
+            self.left  == other.left              &&
+            self.right == other.right
     }
 }
 
@@ -158,6 +204,7 @@ impl PartialOrd for Node {
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.partial_cmp(other)
+            .unwrap_or(Ordering::Equal)
     }
 }
