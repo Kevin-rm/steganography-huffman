@@ -3,20 +3,21 @@ use std::{
     collections::HashMap
 };
 
-struct Source {
-    symbol: String,
-    probability: f64,
+pub struct Source {
+    pub symbol: String,
+    pub probability: f64,
 }
 
-struct Node {
-    symbol: Option<String>,
-    probability: f64,
-    left:  Option<Box<Self>>, // 0
-    right: Option<Box<Self>>, // 1
+#[derive(Debug)]
+pub struct Node {
+    pub symbol: Option<String>,
+    pub probability: f64,
+    pub left:  Option<Box<Self>>, // 0
+    pub right: Option<Box<Self>>, // 1
 }
 
 impl Node {
-    fn from_source(source: &Source) -> Self {
+    pub fn from_source(source: &Source) -> Self {
         Self {
             symbol: Some(source.symbol.clone()),
             probability: source.probability,
@@ -24,13 +25,17 @@ impl Node {
             right: None,
         }
     }
+
+    pub fn is_leaf(&self) -> bool {
+        self.left.is_none() && self.right.is_none()
+    }
 }
 
 impl PartialEq<Self> for Node {
     fn eq(&self, other: &Self) -> bool {
         self.symbol == other.symbol
             && self.probability == other.probability
-            && self.left == other.left
+            && self.left  == other.left
             && self.right == other.right
     }
 }
@@ -50,15 +55,15 @@ impl Ord for Node {
 }
 
 // Returns the root
-fn build_tree(sources: &[Source]) -> Node {
+pub fn build_tree(sources: &[Source]) -> Node {
     use std::collections::BinaryHeap;
 
-    let merge = |left: Node, right: Node| -> Node {
+    let merge = |n1: Node, n2: Node| -> Node {
         Node {
             symbol: None,
-            probability: left.probability + right.probability,
-            left: Some(Box::new(left)),
-            right: Some(Box::new(right)),
+            probability: n1.probability + n2.probability,
+            left:  Some(Box::new(n1)),
+            right: Some(Box::new(n2)),
         }
     };
 
@@ -68,7 +73,7 @@ fn build_tree(sources: &[Source]) -> Node {
     }
 
     while heap.len() > 1 {
-        let left = heap.pop().unwrap();
+        let left  = heap.pop().unwrap();
         let right = heap.pop().unwrap();
         heap.push(merge(left, right));
     }
@@ -76,8 +81,32 @@ fn build_tree(sources: &[Source]) -> Node {
     heap.pop().unwrap()
 }
 
-fn generate_codes(node: &Node, codes: &mut HashMap<String, u8>) {
+pub fn generate_codes(node: &Node) -> HashMap<String, Vec<u8>> {
+    fn generate_codes(
+        node: &Node,
+        codes: &mut HashMap<String, Vec<u8>>,
+        path: &mut Vec<u8>,
+    ) {
+        if node.is_leaf() {
 
+
+            codes.insert(node.symbol.clone().unwrap(), path.clone());
+            return;
+        }
+
+        for (child, bit) in [(&node.left, 0), (&node.right, 1)] {
+            if let Some(child_node) = child {
+                path.push(bit);
+                generate_codes(child_node, codes, path);
+                path.pop();
+            }
+        }
+    }
+
+    let mut codes = HashMap::new();
+    generate_codes(node, &mut codes, &mut Vec::new());
+
+    codes
 }
 
 fn encode(sources: &[Source]) -> Vec<u8> {
