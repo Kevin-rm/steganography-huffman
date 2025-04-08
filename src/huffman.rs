@@ -105,7 +105,7 @@ impl Tree {
     }
 
     pub fn render(&self) -> String {
-        fn render(node: &Node, prefix: &str, is_left: bool, result: &mut String) {
+        fn render_node(node: &Node, prefix: &str, is_left: bool, result: &mut String) {
             result.push_str(&format!("{}{}", prefix, if is_left { TEE } else { ELBOW }));
             
             if node.is_leaf() {
@@ -120,16 +120,16 @@ impl Tree {
             
             let new_prefix = format!("{}{}   ", prefix, if is_left { VERTICAL } else { SPACE });
             if let Some(left) = &node.left() {
-                render(left, &new_prefix, true, result);
+                render_node(left, &new_prefix, true, result);
             }
             
             if let Some(right) = &node.right() {
-                render(right, &new_prefix, false, result);
+                render_node(right, &new_prefix, false, result);
             }
         }
         
         let mut result = String::from(&format!("Arbre d'Huffman (Nombre de feuilles: {})\n", self.leaf_count));
-        render(&self.root, "", false, &mut result);
+        render_node(&self.root, "", false, &mut result);
 
         result.push_str("\nTable de codage:\n");
         let mut codes: Vec<(&String, &Code)> = self.codes.iter().collect();
