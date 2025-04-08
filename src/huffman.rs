@@ -56,7 +56,7 @@ impl Tree {
     pub fn build(sources: &[Source]) -> Self {
         use std::collections::BinaryHeap;
 
-        let merge = |n1: Node, n2: Node| -> Node {
+        let merge_nodes = |n1: Node, n2: Node| -> Node {
             Node {
                 symbol: None,
                 probability: n1.probability + n2.probability,
@@ -72,7 +72,7 @@ impl Tree {
         while heap.len() > 1 {
             let left  = heap.pop().unwrap();
             let right = heap.pop().unwrap();
-            heap.push(merge(left, right));
+            heap.push(merge_nodes(left, right));
         }
 
         let root = heap.pop().unwrap();
