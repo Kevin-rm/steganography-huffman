@@ -20,11 +20,12 @@ pub type Code = (u64, usize);
 
 pub struct Tree {
     pub root: Node,
+    pub leaf_count: usize,
     pub codes: HashMap<String, Code>
 }
 
 impl Tree {
-    fn generate_codes(root: &Node) -> HashMap<String, Code> {
+    fn generate_codes(root: &Node, leaf_count: usize) -> HashMap<String, Code> {
         fn traverse_tree(
             node: &Node,
             current_code: u64,
@@ -45,12 +46,13 @@ impl Tree {
             }
         }
 
-        let mut codes = HashMap::new();
+        let mut codes = HashMap::with_capacity(leaf_count);
         traverse_tree(root, 0, 0, &mut codes);
 
         codes
     }
 
+    #[must_use]
     pub fn build(sources: &[Source]) -> Self {
         use std::collections::BinaryHeap;
 
@@ -74,8 +76,9 @@ impl Tree {
         }
 
         let root = heap.pop().unwrap();
-        let codes = Self::generate_codes(&root);
-        Self { root, codes }
+        let leaf_count = sources.len();
+        let codes = Self::generate_codes(&root, leaf_count);
+        Self { root, leaf_count, codes }
     }
 }
 
