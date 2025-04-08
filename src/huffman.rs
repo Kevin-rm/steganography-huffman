@@ -4,52 +4,43 @@ use std::{
 };
 
 pub struct Source {
-    pub symbol: String,
-    pub probability: f64,
+    symbol: String,
+    probability: f64,
 }
 
-#[derive(Debug)]
-pub struct Node {
-    pub symbol: Option<String>,
-    pub probability: f64,
-    pub left:  Option<Box<Self>>, // 0
-    pub right: Option<Box<Self>>, // 1
+impl Source {
+    pub fn new(symbol: String, probability: f64) -> Self {
+        Source { symbol, probability }
+    }
+
+    pub fn symbol(&self) -> &str {
+        &self.symbol
+    }
+
+    pub fn probability(&self) -> f64 {
+        self.probability
+    }
 }
 
 pub type Code = (u64, usize);
 
 pub struct Tree {
-    pub root: Node,
-    pub leaf_count: usize,
-    pub codes: HashMap<String, Code>
+    root: Node,
+    leaf_count: usize,
+    codes: HashMap<String, Code>
 }
 
 impl Tree {
-    fn generate_codes(root: &Node, leaf_count: usize) -> HashMap<String, Code> {
-        fn traverse_tree(
-            node: &Node,
-            current_code: u64,
-            current_bit_length: usize,
-            codes: &mut HashMap<String, Code>,
-        ) {
-            if node.is_leaf() {
-                codes.insert(node.symbol.clone().unwrap(), (current_code, current_bit_length));
-                return;
-            }
+    pub fn root(&self) -> &Node {
+        &self.root
+    }
 
-            if let Some(left) = &node.left {
-                traverse_tree(left, current_code << 1, current_bit_length + 1, codes);
-            }
+    pub fn leaf_count(&self) -> usize {
+        self.leaf_count
+    }
 
-            if let Some(right) = &node.right {
-                traverse_tree(right, (current_code << 1) | 1, current_bit_length + 1, codes);
-            }
-        }
-
-        let mut codes = HashMap::with_capacity(leaf_count);
-        traverse_tree(root, 0, 0, &mut codes);
-
-        codes
+    pub fn codes(&self) -> &HashMap<String, Code> {
+        &self.codes
     }
 
     #[must_use]
@@ -80,6 +71,41 @@ impl Tree {
         let codes = Self::generate_codes(&root, leaf_count);
         Self { root, leaf_count, codes }
     }
+
+    fn generate_codes(root: &Node, leaf_count: usize) -> HashMap<String, Code> {
+        fn traverse_tree(
+            node: &Node,
+            current_code: u64,
+            current_bit_length: usize,
+            codes: &mut HashMap<String, Code>,
+        ) {
+            if node.is_leaf() {
+                codes.insert(node.symbol.clone().unwrap(), (current_code, current_bit_length));
+                return;
+            }
+
+            if let Some(left) = &node.left {
+                traverse_tree(left, current_code << 1, current_bit_length + 1, codes);
+            }
+
+            if let Some(right) = &node.right {
+                traverse_tree(right, (current_code << 1) | 1, current_bit_length + 1, codes);
+            }
+        }
+
+        let mut codes = HashMap::with_capacity(leaf_count);
+        traverse_tree(root, 0, 0, &mut codes);
+
+        codes
+    }
+}
+
+#[derive(Debug)]
+pub struct Node {
+    symbol: Option<String>,
+    probability: f64,
+    left:  Option<Box<Self>>, // 0
+    right: Option<Box<Self>>, // 1
 }
 
 impl Node {
@@ -94,6 +120,22 @@ impl Node {
 
     pub fn is_leaf(&self) -> bool {
         self.symbol.is_some() && self.left.is_none() && self.right.is_none()
+    }
+
+    pub fn symbol(&self) -> Option<&str> {
+        self.symbol.as_deref()
+    }
+
+    pub fn probability(&self) -> f64 {
+        self.probability
+    }
+
+    pub fn left(&self) -> &Option<Box<Self>> {
+        &self.left
+    }
+
+    pub fn right(&self) -> &Option<Box<Self>> {
+        &self.right
     }
 }
 
