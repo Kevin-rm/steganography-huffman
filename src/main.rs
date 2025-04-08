@@ -1,4 +1,4 @@
-use crate::huffman::{build_tree, generate_codes, Source};
+use crate::huffman::{Source, Tree};
 
 mod huffman;
 
@@ -30,8 +30,6 @@ fn main() {
         },
     ];
 
-    let root = build_tree(&sources);
-    let generate_codes = generate_codes(&root);
-
-    println!("{:?}", generate_codes)
+    let tree = Tree::build(&sources);
+    print!("{:?}", tree.root)
 }
