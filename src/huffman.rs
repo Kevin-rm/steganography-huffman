@@ -77,33 +77,6 @@ impl Tree {
         Self { root, leaf_count, codes }
     }
 
-    fn generate_codes(root: &Node, leaf_count: usize) -> HashMap<String, Code> {
-        fn traverse_tree(
-            node: &Node,
-            current_code: u64,
-            current_bit_length: usize,
-            codes: &mut HashMap<String, Code>,
-        ) {
-            if node.is_leaf() {
-                codes.insert(node.symbol.clone().unwrap(), (current_code, current_bit_length));
-                return;
-            }
-
-            if let Some(left) = &node.left {
-                traverse_tree(left, current_code << 1, current_bit_length + 1, codes);
-            }
-
-            if let Some(right) = &node.right {
-                traverse_tree(right, (current_code << 1) | 1, current_bit_length + 1, codes);
-            }
-        }
-
-        let mut codes = HashMap::with_capacity(leaf_count);
-        traverse_tree(root, 0, 0, &mut codes);
-
-        codes
-    }
-
     pub fn render(&self) -> String {
         fn render_node(node: &Node, prefix: &str, is_left: bool, result: &mut String) {
             result.push_str(&format!("{}{}", prefix, if is_left { TEE } else { ELBOW }));
@@ -143,6 +116,33 @@ impl Tree {
         }
         
         result
+    }
+
+    fn generate_codes(root: &Node, leaf_count: usize) -> HashMap<String, Code> {
+        fn traverse_tree(
+            node: &Node,
+            current_code: u64,
+            current_bit_length: usize,
+            codes: &mut HashMap<String, Code>,
+        ) {
+            if node.is_leaf() {
+                codes.insert(node.symbol.clone().unwrap(), (current_code, current_bit_length));
+                return;
+            }
+
+            if let Some(left) = &node.left {
+                traverse_tree(left, current_code << 1, current_bit_length + 1, codes);
+            }
+
+            if let Some(right) = &node.right {
+                traverse_tree(right, (current_code << 1) | 1, current_bit_length + 1, codes);
+            }
+        }
+
+        let mut codes = HashMap::with_capacity(leaf_count);
+        traverse_tree(root, 0, 0, &mut codes);
+
+        codes
     }
 }
 
