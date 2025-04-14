@@ -1,8 +1,9 @@
 use std::{
     cmp::Ordering,
-    collections::HashMap
+    collections::HashMap,
+    fmt,
+    fmt::{Display, Formatter}
 };
-use std::fmt::write;
 
 pub struct Source {
     symbol: String,
@@ -36,8 +37,8 @@ const ELBOW:    &str = "└── ";
 const VERTICAL: &str = "│";
 const SPACE:    &str = " ";
 
-impl std::fmt::Display for Tree {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for Tree {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}\n{}", self.render(), self.render_code_tables())
     }
 }
@@ -82,6 +83,57 @@ impl Tree {
         let leaf_count = sources.len();
         let codes = Self::generate_codes(&root, leaf_count);
         Self { root, leaf_count, codes }
+    }
+
+    pub fn encode(&self, input: &str) -> Result<Vec<u8>, Error> {
+        let mut result = Vec::with_capacity(input.len());
+        let mut current_byte = 0u8;
+        let mut bit_position = 7;
+
+        for symbol in input.chars() {
+            let symbol_str = symbol.to_string();
+            let &(code, bits) = self.codes.get(&symbol_str)
+                .ok_or_else(|| Error::SymbolNotFound(symbol_str))?;
+
+            for i in (0..bits).rev() {
+                let bit = (code >> i) & 1;
+                current_byte |= (bit as u8) << bit_position;
+
+                if bit_position == 0 {
+                    result.push(current_byte);
+                    current_byte = 0;
+                    bit_position = 7;
+                } else { bit_position -= 1; }
+            }
+        }
+
+        if bit_position != 7 { result.push(current_byte); }
+
+        Ok(result)
+    }
+
+    pub fn decode(&self, encoded: &[u8]) -> Result<String, Error> {
+        let mut result = String::new();
+        let mut current_node = &self.root;
+
+        for &byte in encoded {
+            for i in (0..8).rev() {
+                current_node = match (byte >> i) & 1 {
+                    0 => current_node.left.as_ref(),
+                    1 => current_node.right.as_ref(),
+                    _ => unreachable!(),
+                }.ok_or(Error::InvalidCode)?;
+
+                if !current_node.is_leaf() { continue }
+
+                result.push_str(current_node.symbol().unwrap());
+                current_node = &self.root;
+            }
+        }
+
+        if current_node != &self.root { return Err(Error::InvalidCode); }
+
+        Ok(result)
     }
 
     pub fn render(&self) -> String {
@@ -221,3 +273,17 @@ impl Ord for Node {
             .unwrap_or(Ordering::Equal)
     }
 }
+
+#[derive(Debug)]
+pub enum Error { SymbolNotFound(String), InvalidCode }
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::SymbolNotFound(sym) => write!(f, "Symbole \"{}\" non trouvé dans l'arbre", sym),
+            Error::InvalidCode                 => write!(f, "Code binaire invalide"),
+        }
+    }
+}
+
+impl std::error::Error for Error { }
