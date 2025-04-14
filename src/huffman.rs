@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     collections::HashMap
 };
+use std::fmt::write;
 
 pub struct Source {
     symbol: String,
@@ -35,6 +36,12 @@ const ELBOW:    &str = "└── ";
 const VERTICAL: &str = "│";
 const SPACE:    &str = " ";
 
+impl std::fmt::Display for Tree {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}\n{}", self.render(), self.render_code_tables())
+    }
+}
+
 impl Tree {
     pub fn root(&self) -> &Node {
         &self.root
@@ -62,7 +69,7 @@ impl Tree {
         };
 
         let mut heap = sources.iter()
-            .map(Node::from_source)
+            .map(Node::from)
             .collect::<BinaryHeap<_>>();
 
         while heap.len() > 1 {
@@ -103,18 +110,22 @@ impl Tree {
         
         let mut result = String::from(&format!("Arbre d'Huffman (Nombre de feuilles: {})\n", self.leaf_count));
         render_node(&self.root, "", false, &mut result);
+        
+        result
+    }
 
-        result.push_str("\nTable de codage:\n");
+    pub fn render_code_tables(&self) -> String {
         let mut codes: Vec<(&String, &Code)> = self.codes.iter().collect();
         codes.sort_by(|a, b| a.0.cmp(b.0));
-        
+
+        let mut result = String::from("Table de codage:\n");
         for (symbol, (code, bits)) in codes {
             let code_bits = format!("{:b}", code);
             result.push_str(&format!("\"{}\" => {}{} ({} bits)\n",
                 symbol, "0".repeat(bits.saturating_sub(code_bits.len())), code_bits, bits
             ));
         }
-        
+
         result
     }
 
@@ -154,16 +165,18 @@ pub struct Node {
     right: Option<Box<Self>>, // 1
 }
 
-impl Node {
-    pub fn from_source(source: &Source) -> Self {
+impl From<&Source> for Node {
+    fn from(value: &Source) -> Self {
         Self {
-            symbol: Some(source.symbol.clone()),
-            probability: source.probability,
+            symbol: Some(value.symbol.clone()),
+            probability: value.probability,
             left:  None,
             right: None,
         }
     }
+}
 
+impl Node {
     pub fn is_leaf(&self) -> bool {
         self.symbol.is_some() && self.left.is_none() && self.right.is_none()
     }
