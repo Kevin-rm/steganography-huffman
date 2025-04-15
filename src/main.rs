@@ -1,6 +1,7 @@
 use crate::huffman::{Source, Tree};
 
 mod huffman;
+mod steganography;
 
 fn main() {
     let sources = vec![

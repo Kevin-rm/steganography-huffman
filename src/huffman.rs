@@ -92,10 +92,10 @@ impl Tree {
     }
 
     pub fn encode(&self, input: &str) -> Result<(Vec<u8>, usize), Error> {
-        let mut result = Vec::with_capacity(input.len() / 2);
+        let mut result       = Vec::with_capacity(input.len() / 2);
         let mut current_byte = 0u8;
         let mut bit_position = 7;
-        let mut total_bits = 0;
+        let mut total_bits   = 0;
 
         let mut remaining_input = input;
         while !remaining_input.is_empty() {
