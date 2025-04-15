@@ -29,7 +29,8 @@ pub type Code = (u64, usize);
 pub struct Tree {
     root: Node,
     leaf_count: usize,
-    codes: HashMap<String, Code>
+    codes: HashMap<String, Code>,
+    sorted_codes: Vec<(String, Code)>
 }
 
 const TEE:      &str = "├── ";
@@ -82,56 +83,80 @@ impl Tree {
         let root = heap.pop().unwrap();
         let leaf_count = sources.len();
         let codes = Self::generate_codes(&root, leaf_count);
-        Self { root, leaf_count, codes }
+        let mut sorted_codes: Vec<_> = codes.iter()
+            .map(|(k, v)| (k.clone(), *v))
+            .collect();
+        sorted_codes.sort_by(|(a, _), (b, _)| b.len().cmp(&a.len()));
+
+        Self { root, leaf_count, codes, sorted_codes }
     }
 
-    pub fn encode(&self, input: &str) -> Result<Vec<u8>, Error> {
-        let mut result = Vec::with_capacity(input.len());
+    pub fn encode(&self, input: &str) -> Result<(Vec<u8>, usize), Error> {
+        let mut result = Vec::with_capacity(input.len() / 2);
         let mut current_byte = 0u8;
         let mut bit_position = 7;
+        let mut total_bits = 0;
 
-        for symbol in input.chars() {
-            let symbol_str = symbol.to_string();
-            let &(code, bits) = self.codes.get(&symbol_str)
-                .ok_or_else(|| Error::SymbolNotFound(symbol_str))?;
+        let mut remaining_input = input;
+        while !remaining_input.is_empty() {
+            match self.sorted_codes.iter()
+                .find(|(symbol, _)|
+                    remaining_input.starts_with(symbol.as_str()
+                )) {
+                Some((symbol, (code, bits))) => {
+                    for i in (0..*bits).rev() {
+                        current_byte |= ((*code >> i & 1) as u8) << bit_position;
 
-            for i in (0..bits).rev() {
-                let bit = (code >> i) & 1;
-                current_byte |= (bit as u8) << bit_position;
-
-                if bit_position == 0 {
-                    result.push(current_byte);
-                    current_byte = 0;
-                    bit_position = 7;
-                } else { bit_position -= 1; }
+                        if bit_position == 0 {
+                            result.push(current_byte);
+                            current_byte = 0;
+                            bit_position = 7;
+                        } else { bit_position -= 1; }
+                        total_bits += 1;
+                    }
+                    remaining_input = &remaining_input[symbol.len()..];
+                }
+                None => {
+                    return Err(Error::SymbolNotFound(remaining_input.chars().next()
+                        .map(|c| c.to_string())
+                        .unwrap_or_default()
+                    ));
+                }
             }
         }
 
         if bit_position != 7 { result.push(current_byte); }
 
-        Ok(result)
+        Ok((result, total_bits))
     }
 
-    pub fn decode(&self, encoded: &[u8]) -> Result<String, Error> {
+    pub fn decode(&self, encoded: &[u8], bit_len: usize) -> Result<String, Error> {
         let mut result = String::new();
         let mut current_node = &self.root;
+        let mut bits_read = 0;
 
         for &byte in encoded {
             for i in (0..8).rev() {
+                if bits_read >= bit_len { break; }
+
                 current_node = match (byte >> i) & 1 {
                     0 => current_node.left.as_ref(),
                     1 => current_node.right.as_ref(),
                     _ => unreachable!(),
                 }.ok_or(Error::InvalidCode)?;
 
-                if !current_node.is_leaf() { continue }
+                if !current_node.is_leaf() { 
+                    bits_read += 1;
+                    continue 
+                }
 
                 result.push_str(current_node.symbol().unwrap());
                 current_node = &self.root;
+                bits_read += 1;
             }
         }
 
-        if current_node != &self.root { return Err(Error::InvalidCode); }
+        if current_node != &self.root && bits_read < bit_len { return Err(Error::InvalidCode); }
 
         Ok(result)
     }
@@ -280,8 +305,8 @@ pub enum Error { SymbolNotFound(String), InvalidCode }
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Error::SymbolNotFound(sym) => write!(f, "Symbole \"{}\" non trouvé dans l'arbre", sym),
-            Error::InvalidCode                 => write!(f, "Code binaire invalide"),
+            Error::SymbolNotFound(s) => write!(f, "Symbole \"{}\" non trouvé dans l'arbre", s),
+            Error::InvalidCode               => write!(f, "Code binaire invalide"),
         }
     }
 }

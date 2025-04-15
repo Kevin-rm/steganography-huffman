@@ -13,5 +13,9 @@ fn main() {
     ];
 
     let tree = Tree::build(&sources);
-    println!("{}", tree.render());
+    let (encoded, bit_len) = tree.encode("s1s2").unwrap();
+
+    let decoded = tree.decode(&encoded, bit_len).unwrap();
+
+    println!("{:?}", decoded);
 }
